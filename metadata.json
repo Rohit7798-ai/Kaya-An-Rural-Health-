@@ -1,0 +1,6 @@
+{
+  "name": "Kaya EMR",
+  "description": "Minimal, calm, keyboard-first desktop electronic medical record for rural and low-resource clinics.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
