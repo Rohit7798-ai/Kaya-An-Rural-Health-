@@ -4,7 +4,6 @@ import {
   ZoomOut,
   Maximize2,
   RotateCw,
-  RefreshCw,
   Move,
   FileText,
 } from 'lucide-react';
@@ -16,6 +15,8 @@ export interface DocumentPaneProps {
   pan: { x: number; y: number };
   rotation: number;
   isPanning: boolean;
+  highlightedLineId?: string | null;
+  onSelectLine?: (lineId: string) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetZoom: () => void;
@@ -33,6 +34,8 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
   pan,
   rotation,
   isPanning,
+  highlightedLineId,
+  onSelectLine,
   onZoomIn,
   onZoomOut,
   onResetZoom,
@@ -45,7 +48,12 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const isProcessing = attachment.status === 'processing';
+  const getRowHighlightClass = (lineId: string) => {
+    if (highlightedLineId === lineId) {
+      return 'bg-accent/15 ring-2 ring-accent/60 transition-all';
+    }
+    return 'hover:bg-black/5 transition-colors cursor-pointer';
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full bg-surface-alt/40 overflow-hidden relative select-none">
@@ -58,7 +66,7 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
             {attachment.filename}
           </span>
           <span className="text-text-faint">·</span>
-          <span>Page 1 of 1</span>
+          <span>Scanned Document</span>
         </div>
 
         {/* Right: Zoom & Orientation Controls */}
@@ -130,7 +138,7 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
         {/* Helper Hint bottom-left */}
         <div className="absolute bottom-3 left-3 z-10 pointer-events-none flex items-center gap-1.5 px-2.5 py-1 bg-surface/90 border border-border rounded-sm text-[11px] font-mono text-text-muted shadow-none">
           <Move className="w-3 h-3 text-text-faint" strokeWidth={1.5} />
-          <span>Click + drag to pan · Wheel to zoom</span>
+          <span>Click + drag to pan · Scroll to zoom</span>
         </div>
 
         {/* The Document Canvas Container */}
@@ -145,7 +153,12 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
           {/* Document Sheet (Simulated High-Resolution Scan) */}
           <div className="w-[520px] min-h-[740px] bg-[#FAF8F5] text-[#26221C] border border-border-strong rounded-[4px] p-8 font-sans shadow-none relative">
             {/* Watermark / PHC Emblem */}
-            <div className="border-b-2 border-[#26221C]/80 pb-4 mb-5 flex items-start justify-between">
+            <div
+              onClick={() => onSelectLine?.('l1')}
+              className={`border-b-2 border-[#26221C]/80 pb-4 mb-5 flex items-start justify-between rounded-sm p-1 ${
+                highlightedLineId === 'l1' ? 'ring-2 ring-accent/60 bg-accent/10' : ''
+              }`}
+            >
               <div>
                 <div className="text-[11px] font-mono font-bold tracking-widest text-[#26221C]/70 uppercase">
                   Government Health Services · Rural Health Mission
@@ -166,7 +179,14 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
             </div>
 
             {/* Patient Header Block */}
-            <div className="bg-[#F0EBE1] border border-[#DDD5C5] rounded-[3px] p-3 mb-5 grid grid-cols-2 gap-y-2 text-xs font-mono">
+            <div
+              onClick={() => onSelectLine?.('l2')}
+              className={`bg-[#F0EBE1] border border-[#DDD5C5] rounded-[3px] p-3 mb-5 grid grid-cols-2 gap-y-2 text-xs font-mono cursor-pointer ${
+                highlightedLineId === 'l2' || highlightedLineId === 'l3'
+                  ? 'ring-2 ring-accent/60 bg-accent/10'
+                  : 'hover:border-[#26221C]/40'
+              }`}
+            >
               <div>
                 <span className="text-[#26221C]/60">Patient Name: </span>
                 <strong className="text-[#26221C] font-sans text-sm">{attachment.patientName}</strong>
@@ -204,37 +224,55 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#DDD5C5]/60 font-mono text-xs">
-                  <tr>
+                  <tr
+                    onClick={() => onSelectLine?.('l4')}
+                    className={getRowHighlightClass('l4')}
+                  >
                     <td className="py-2 font-sans font-medium text-[#26221C]">Total Cholesterol</td>
                     <td className="py-2 text-right font-bold text-[#26221C]">184</td>
                     <td className="py-2 text-center text-[#26221C]/60">mg/dL</td>
                     <td className="py-2 text-[#26221C]/80">Desirable: &lt; 200</td>
                   </tr>
-                  <tr className="bg-[#B4552F]/5">
+                  <tr
+                    onClick={() => onSelectLine?.('l5')}
+                    className={getRowHighlightClass('l5')}
+                  >
                     <td className="py-2 font-sans font-medium text-[#26221C]">Serum Triglycerides</td>
                     <td className="py-2 text-right font-bold text-[#B4552F]">142</td>
                     <td className="py-2 text-center text-[#26221C]/60">mg/dL</td>
                     <td className="py-2 text-[#26221C]/80">Normal: &lt; 150</td>
                   </tr>
-                  <tr>
+                  <tr
+                    onClick={() => onSelectLine?.('l6')}
+                    className={getRowHighlightClass('l6')}
+                  >
                     <td className="py-2 font-sans font-medium text-[#26221C]">HDL Cholesterol</td>
                     <td className="py-2 text-right font-bold text-[#26221C]">46</td>
                     <td className="py-2 text-center text-[#26221C]/60">mg/dL</td>
                     <td className="py-2 text-[#26221C]/80">Target: &gt; 50</td>
                   </tr>
-                  <tr className="bg-[#B4552F]/10">
+                  <tr
+                    onClick={() => onSelectLine?.('l7')}
+                    className={getRowHighlightClass('l7')}
+                  >
                     <td className="py-2 font-sans font-medium text-[#26221C]">LDL Cholesterol (Calc)</td>
                     <td className="py-2 text-right font-bold text-[#B4552F]">110</td>
                     <td className="py-2 text-center text-[#26221C]/60">mg/dL</td>
                     <td className="py-2 text-[#26221C]/80">Optimal: &lt; 100</td>
                   </tr>
-                  <tr>
+                  <tr
+                    onClick={() => onSelectLine?.('l8')}
+                    className={getRowHighlightClass('l8')}
+                  >
                     <td className="py-2 font-sans font-medium text-[#26221C]">VLDL Cholesterol</td>
                     <td className="py-2 text-right font-bold text-[#26221C]">28.4</td>
                     <td className="py-2 text-center text-[#26221C]/60">mg/dL</td>
                     <td className="py-2 text-[#26221C]/80">Normal: 10 - 30</td>
                   </tr>
-                  <tr>
+                  <tr
+                    onClick={() => onSelectLine?.('l9')}
+                    className={getRowHighlightClass('l9')}
+                  >
                     <td className="py-2 font-sans font-medium text-[#26221C]">Total / HDL Ratio</td>
                     <td className="py-2 text-right font-bold text-[#26221C]">4.0</td>
                     <td className="py-2 text-center text-[#26221C]/60">ratio</td>
@@ -245,7 +283,14 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
             </div>
 
             {/* Notes & Impression */}
-            <div className="border-t border-[#DDD5C5] pt-3 text-xs mb-8">
+            <div
+              onClick={() => onSelectLine?.('l10')}
+              className={`border-t border-[#DDD5C5] pt-3 text-xs mb-8 rounded-sm p-1.5 cursor-pointer ${
+                highlightedLineId === 'l10' || highlightedLineId === 'l11'
+                  ? 'ring-2 ring-accent/60 bg-accent/10'
+                  : 'hover:bg-black/5'
+              }`}
+            >
               <div className="font-mono text-[11px] text-[#26221C]/70 uppercase font-bold mb-1">
                 Clinical Impression & Recommendations:
               </div>
@@ -277,17 +322,6 @@ export const DocumentPane: React.FC<DocumentPaneProps> = ({
                 </div>
               </div>
             </div>
-
-            {/* Animated OCR Scan Beam if processing */}
-            {isProcessing && (
-              <div
-                className="absolute inset-x-0 h-1 bg-accent/80 shadow-none pointer-events-none transition-all duration-300"
-                style={{
-                  top: '40%',
-                  animation: 'ocrScan 1.6s ease-in-out infinite alternate',
-                }}
-              />
-            )}
           </div>
         </div>
       </div>
