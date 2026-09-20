@@ -1,17 +1,18 @@
 import React, { useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Paperclip, Camera, FileText, Image as ImageIcon, X, RefreshCw, Check, ExternalLink } from 'lucide-react';
+import { Paperclip, Camera, FileText, Image as ImageIcon, X, RefreshCw, Check, ExternalLink, Sparkles } from 'lucide-react';
 import { AttachmentItem } from '../../features/visits/useAttachments';
 
 export interface AttachmentListProps {
   attachments: AttachmentItem[];
-  onAddAttachment: (file: { name: string; sizeBytes: number; type: string }) => void;
+  onAddAttachment: (file: { name: string; sizeBytes: number; type: string } | File) => void;
   onRemoveAttachment: (id: string) => void;
   onToggleOcrExpand: (id: string) => void;
   onUpdateOcrText: (id: string, text: string) => void;
   onSetEditingOcr: (id: string, isEditing: boolean) => void;
   onRetryAttachment: (id: string) => void;
   onPromoteOcrText: (text: string) => void;
+  onOpenScanner?: () => void;
 }
 
 export const AttachmentList: React.FC<AttachmentListProps> = ({
@@ -23,6 +24,7 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
   onSetEditingOcr,
   onRetryAttachment,
   onPromoteOcrText,
+  onOpenScanner,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -31,11 +33,7 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
     const files = e.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-      onAddAttachment({
-        name: file.name,
-        sizeBytes: file.size,
-        type: file.type,
-      });
+      onAddAttachment(file);
       // Reset input
       e.target.value = '';
     }
@@ -60,12 +58,23 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
         className="hidden"
       />
 
-      {/* Two affordances side by side */}
-      <div className="flex flex-wrap items-center gap-3">
+      {/* Affordances: AI Scanner + File Upload + Photo */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        {onOpenScanner && (
+          <button
+            type="button"
+            onClick={onOpenScanner}
+            className="h-9 px-3.5 inline-flex items-center gap-2 bg-accent-soft hover:bg-accent-soft/80 border border-accent/40 text-xs font-sans font-medium text-accent rounded-lg transition-colors cursor-pointer shadow-2xs"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>AI Scan Document (OCR)</span>
+          </button>
+        )}
+
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="h-9 px-3.5 inline-flex items-center gap-2 bg-surface hover:bg-surface-alt border border-border text-xs font-sans font-medium text-text rounded-sm transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          className="h-9 px-3.5 inline-flex items-center gap-2 bg-surface hover:bg-surface-alt border border-border text-xs font-sans font-medium text-text rounded-lg transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
           <Paperclip className="w-3.5 h-3.5 text-text-muted" strokeWidth={1.5} />
           <span>Upload file</span>
@@ -74,7 +83,7 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({
         <button
           type="button"
           onClick={() => cameraInputRef.current?.click()}
-          className="h-9 px-3.5 inline-flex items-center gap-2 bg-surface hover:bg-surface-alt border border-border text-xs font-sans font-medium text-text rounded-sm transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
+          className="h-9 px-3.5 inline-flex items-center gap-2 bg-surface hover:bg-surface-alt border border-border text-xs font-sans font-medium text-text rounded-lg transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent"
         >
           <Camera className="w-3.5 h-3.5 text-text-muted" strokeWidth={1.5} />
           <span>Take photo</span>

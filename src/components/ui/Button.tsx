@@ -35,11 +35,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       destructive: 'bg-danger text-surface hover:bg-danger/90 active:bg-danger border border-transparent',
     };
 
-    // Size classes (no radius > 12px; using rounded-sm = 6px or rounded-md = 8px)
+    // Size classes
     const sizes = {
-      sm: 'h-8 px-3 text-xs rounded-sm gap-1.5',
-      md: 'h-9 px-4 text-sm rounded-sm gap-2',
-      lg: 'h-11 px-5 text-md rounded-md gap-2.5',
+      sm: 'h-8 px-3 text-xs rounded-md gap-1.5',
+      md: 'h-9 px-4 text-sm rounded-md gap-2',
+      lg: 'h-11 px-5 text-md rounded-lg gap-2.5',
     };
 
     return (

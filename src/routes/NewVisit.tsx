@@ -7,6 +7,7 @@ import {
   Plus,
   Printer,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { Field } from '../components/form/Field';
 import { SegmentedControl } from '../components/form/SegmentedControl';
@@ -15,6 +16,8 @@ import { VitalsGrid } from '../components/visit/VitalsGrid';
 import { PrescriptionRow, COMMON_MEDICINES } from '../components/visit/PrescriptionRow';
 import { AttachmentList } from '../components/visit/AttachmentList';
 import { NotesTextarea } from '../components/visit/NotesTextarea';
+import { SmartScannerModal } from '../components/scanner/SmartScannerModal';
+import { ScannedMedication, VisionAnalysisResult } from '../services/aiVisionService';
 import { useVisitForm } from '../features/visits/useVisitForm';
 import { useAttachments } from '../features/visits/useAttachments';
 import { SEEDED_PATIENT, usePatient } from '../features/patients/usePatient';
@@ -91,6 +94,9 @@ export const NewVisit: React.FC = () => {
   // Discard confirmation modal
   const [showDiscardModal, setShowDiscardModal] = useState(false);
 
+  // Vision AI Document Scanner Modal state
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
   // Toast state
   const [toast, setToast] = useState<{
     message: string;
@@ -98,6 +104,96 @@ export const NewVisit: React.FC = () => {
     actionText?: string;
     onAction?: () => void;
   } | null>(null);
+
+  // Helper to parse frequency string to enum
+  const parseFrequency = (freq: string): 'OD' | 'BD' | 'TDS' | 'QID' | 'PRN' | 'Other' => {
+    const f = (freq || '').toUpperCase();
+    if (f.includes('TDS') || f.includes('1-1-1') || f.includes('THREE')) return 'TDS';
+    if (f.includes('BD') || f.includes('1-0-1') || f.includes('TWO')) return 'BD';
+    if (f.includes('OD') || f.includes('1-0-0') || f.includes('0-1-0') || f.includes('0-0-1') || f.includes('ONCE')) return 'OD';
+    if (f.includes('QID') || f.includes('1-1-1-1') || f.includes('FOUR')) return 'QID';
+    if (f.includes('PRN') || f.includes('SOS') || f.includes('AS NEEDED')) return 'PRN';
+    return 'Other';
+  };
+
+  // Helper to parse duration string to durationValue and durationUnit
+  const parseDuration = (dur: string): { durationValue: string; durationUnit: 'days' | 'weeks' } => {
+    const d = (dur || '').toLowerCase();
+    const numMatch = d.match(/\d+/);
+    const num = numMatch ? numMatch[0] : '5';
+    if (d.includes('week')) {
+      return { durationValue: num, durationUnit: 'weeks' };
+    }
+    if (d.includes('month')) {
+      const days = parseInt(num, 10) * 30;
+      return { durationValue: String(days), durationUnit: 'days' };
+    }
+    return { durationValue: num, durationUnit: 'days' };
+  };
+
+  // Handle auto-populating visit form from Vision AI Scanner
+  const handleApplyFromScanner = (result: {
+    medications: ScannedMedication[];
+    diagnoses: string[];
+    clinicalNotes: string[];
+    rawText: string;
+  }) => {
+    if (result.medications.length > 0) {
+      setRxOpen(true);
+      const newRxRows = result.medications.map((med, idx) => {
+        const { durationValue, durationUnit } = parseDuration(med.duration);
+        return {
+          id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `rx-scan-${Date.now()}-${idx}`,
+          medicine: med.name,
+          dose: med.dosage || '1 tab',
+          frequency: parseFrequency(med.frequency),
+          durationValue,
+          durationUnit,
+        };
+      });
+
+      setFormData((prev) => {
+        const isInitialEmpty = prev.prescriptions.length === 1 && !prev.prescriptions[0].medicine.trim();
+        const prescriptions = isInitialEmpty ? newRxRows : [...prev.prescriptions, ...newRxRows];
+
+        let updatedDiagnosis = prev.diagnosis;
+        if (!updatedDiagnosis && result.diagnoses.length > 0) {
+          updatedDiagnosis = result.diagnoses[0];
+        }
+
+        let updatedNotes = prev.assessmentNotes;
+        if (result.clinicalNotes.length > 0) {
+          const notesToAdd = result.clinicalNotes.join('\n• ');
+          updatedNotes = updatedNotes
+            ? `${updatedNotes}\n\n[Scanned Rx Advice]:\n• ${notesToAdd}`
+            : `[Scanned Rx Advice]:\n• ${notesToAdd}`;
+        }
+
+        return {
+          ...prev,
+          prescriptions,
+          diagnosis: updatedDiagnosis,
+          assessmentNotes: updatedNotes,
+        };
+      });
+
+      setToast({
+        message: `✨ Added ${result.medications.length} medications from scanned prescription.`,
+        type: 'success',
+      });
+    } else if (result.rawText) {
+      setFormData((prev) => ({
+        ...prev,
+        assessmentNotes: prev.assessmentNotes
+          ? `${prev.assessmentNotes}\n\n[Scanned Document]:\n${result.rawText}`
+          : `[Scanned Document]:\n${result.rawText}`,
+      }));
+      setToast({
+        message: '✨ Extracted text added to assessment notes.',
+        type: 'success',
+      });
+    }
+  };
 
   // Ref for chief complaint input (autofocus)
   const chiefComplaintRef = useRef<HTMLInputElement>(null);
@@ -831,17 +927,29 @@ export const NewVisit: React.FC = () => {
                     ))}
                   </div>
 
-                  {/* Add medicine button */}
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={addPrescriptionRow}
-                      className="inline-flex items-center gap-1.5 font-sans text-xs font-medium text-accent hover:text-accent-hover cursor-pointer py-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>Add medicine</span>
-                    </button>
-                    <div className="font-sans text-xs text-text-muted mt-1">
+                  {/* Add medicine button + AI Scan button */}
+                  <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={addPrescriptionRow}
+                        className="inline-flex items-center gap-1.5 font-sans text-xs font-medium text-accent hover:text-accent-hover cursor-pointer py-1"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add medicine</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsScannerOpen(true)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans font-medium text-accent bg-accent-soft hover:bg-accent-soft/80 border border-accent/40 cursor-pointer shadow-2xs transition-colors"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>AI Scan Paper Rx</span>
+                      </button>
+                    </div>
+
+                    <div className="font-sans text-xs text-text-muted">
                       Tip: press <kbd className="font-mono text-[10px] px-1 py-0.5 rounded-sm bg-surface-alt border border-border">⌘⇧M</kbd> to add a row.
                     </div>
                   </div>
@@ -889,6 +997,7 @@ export const NewVisit: React.FC = () => {
                     onSetEditingOcr={setEditingOcr}
                     onRetryAttachment={retryAttachment}
                     onPromoteOcrText={handlePromoteOcrText}
+                    onOpenScanner={() => setIsScannerOpen(true)}
                   />
                 </div>
               )}
@@ -1083,6 +1192,16 @@ export const NewVisit: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* ── VISION AI SCANNER MODAL ── */}
+      <SmartScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onApplyToVisit={handleApplyFromScanner}
+        onSaveAttachment={(file) => {
+          void addAttachment(file);
+        }}
+      />
     </div>
   );
 };

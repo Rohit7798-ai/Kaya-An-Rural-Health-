@@ -161,9 +161,9 @@ export const Today: React.FC = () => {
         {/* Left / Main Column: Visit Register Queue */}
         <div className="flex-1 w-full flex flex-col gap-4">
           {/* Controls Bar: Filter Tabs + Inline Search */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface border border-border rounded-md p-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface border border-border/90 rounded-xl p-2 sm:px-3 sm:py-2">
             {/* Filter pills */}
-            <div className="flex items-center gap-1 overflow-x-auto">
+            <div className="flex items-center gap-1.5 overflow-x-auto">
               {(
                 [
                   { id: 'all', label: 'All', count: totalCount },
@@ -181,7 +181,7 @@ export const Today: React.FC = () => {
                       setStatusFilter(tab.id);
                       setSelectedIndex(0);
                     }}
-                    className={`h-7 px-2.5 rounded-sm text-xs font-sans font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
+                    className={`h-8 px-3 rounded-lg text-xs font-sans font-medium transition-colors flex items-center gap-2 whitespace-nowrap cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent ${
                       isActive
                         ? 'bg-accent-soft text-text border border-accent/40'
                         : 'text-text-muted hover:text-text hover:bg-surface-alt border border-transparent'
@@ -189,7 +189,7 @@ export const Today: React.FC = () => {
                   >
                     <span>{tab.label}</span>
                     <span
-                      className={`font-mono text-xs tabular-nums px-1 py-0.2 rounded-sm ${
+                      className={`font-mono text-[11px] tabular-nums px-1.5 py-0.5 rounded-full ${
                         isActive
                           ? 'bg-surface text-text'
                           : 'bg-surface-alt text-text-muted'
@@ -202,10 +202,10 @@ export const Today: React.FC = () => {
               })}
             </div>
 
-            {/* Quick in-register filter input */}
-            <div className="relative flex items-center w-full sm:w-56">
+            {/* Quick in-register filter input - pill shaped */}
+            <div className="relative flex items-center w-full sm:w-60">
               <Search
-                className="w-3.5 h-3.5 text-text-muted absolute left-2.5 pointer-events-none"
+                className="w-3.5 h-3.5 text-text-muted absolute left-3 pointer-events-none"
                 strokeWidth={1.5}
               />
               <input
@@ -216,7 +216,7 @@ export const Today: React.FC = () => {
                   setSelectedIndex(0);
                 }}
                 placeholder="Filter visits…"
-                className="w-full h-7 pl-8 pr-2.5 bg-surface-alt text-text text-xs rounded-sm border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent placeholder:text-text-faint transition-colors"
+                className="w-full h-8 pl-8 pr-3 bg-surface-alt/70 hover:bg-surface-alt focus:bg-surface text-text text-xs rounded-full border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent placeholder:text-text-faint transition-colors"
               />
             </div>
           </div>

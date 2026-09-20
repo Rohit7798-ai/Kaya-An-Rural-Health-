@@ -8,6 +8,8 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { drainQueue } from '../../lib/sync';
 import { sessionStore } from '../../state/session';
 
+import { aiVisionService } from '../../services/aiVisionService';
+
 export interface AttachmentItem {
   id: string;
   filename: string;
@@ -45,83 +47,28 @@ export function useAttachments(visitId?: string, patientId?: string) {
     return list.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
   }, [visitId]);
 
-  // Upload and OCR execution function
+  // Upload and OCR execution function powered by Gemini Multimodal Vision
   const uploadAndOcr = useCallback(
     async (attachmentId: string, file: File, filename: string) => {
-      const session = sessionStore.getState();
-      const clinicId = session.user?.clinic_id || 'cln-wardha-01';
-      const pid = patientId || 'P-0412';
-
-      if (!navigator.onLine || !isSupabaseConfigured()) {
-        await db.attachments.update(attachmentId, {
-          ocr_status: 'waiting_upload',
-          sync_state: 'waiting_upload',
-          ocr_text:
-            'Prescription card (offline processed): Tab Amlodipine 5mg OD, Tab Metformin 500mg BD. Regular clinic follow-up.',
-          ocr_confidence: 0.92,
-        });
-        return;
-      }
-
       try {
-        // 1. Upload to Supabase Storage
-        const filePath = `${clinicId}/${pid}/${attachmentId}/${filename}`;
-        const { error: uploadError } = await supabase.storage
-          .from('attachments')
-          .upload(filePath, file);
+        // Run AI Vision document analysis
+        const visionResult = await aiVisionService.analyzeDocument(file, file.type);
 
-        if (uploadError) {
-          console.warn('Supabase storage upload failed:', uploadError.message);
-          await db.attachments.update(attachmentId, {
-            ocr_status: 'failed',
-            sync_state: 'failed',
-          });
-          return;
-        }
-
-        // 2. Invoke Edge Function for OCR
-        try {
-          await supabase.functions.invoke('run-ocr', {
-            body: { attachment_id: attachmentId },
-          });
-        } catch (fnErr) {
-          console.warn('run-ocr edge function invocation:', fnErr);
-        }
-
-        // 3. Poll after 3s
-        await new Promise((res) => setTimeout(res, 3000));
-        const { data: row } = await supabase
-          .from('attachments')
-          .select('ocr_text,ocr_confidence,ocr_status')
-          .eq('id', attachmentId)
-          .single();
-
-        if (row) {
-          await db.attachments.update(attachmentId, {
-            ocr_text: row.ocr_text || 'OCR completed. Normal clinical report values.',
-            ocr_confidence: row.ocr_confidence ?? 0.95,
-            ocr_status: (row.ocr_status as DbAttachment['ocr_status']) || 'ready',
-            sync_state: 'synced',
-          });
-        } else {
-          // Default mock recognition if function was stubbed
-          await db.attachments.update(attachmentId, {
-            ocr_text:
-              'Lipid Profile Report: Total Cholesterol: 184 mg/dL\nTriglycerides: 142 mg/dL\nHDL: 46 mg/dL\nLDL: 110 mg/dL',
-            ocr_confidence: 0.94,
-            ocr_status: 'ready',
-            sync_state: 'synced',
-          });
-        }
+        await db.attachments.update(attachmentId, {
+          ocr_text: visionResult.rawText,
+          ocr_confidence: visionResult.confidence,
+          ocr_status: 'ready',
+          sync_state: 'synced',
+        });
       } catch (err) {
-        console.error('OCR pipeline error:', err);
+        console.error('Vision OCR pipeline error:', err);
         await db.attachments.update(attachmentId, {
           ocr_status: 'failed',
           sync_state: 'failed',
         });
       }
     },
-    [patientId]
+    []
   );
 
   // Add attachment handler

@@ -41,7 +41,7 @@ export const SyncPill: React.FC<SyncPillProps> = ({
 
   const content = (
     <div
-      className={`inline-flex items-center gap-2 h-8 px-2.5 bg-surface-alt/50 hover:bg-surface-alt text-xs font-mono rounded-sm border border-border transition-colors ${className}`}
+      className={`inline-flex items-center gap-2 h-8 px-2.5 bg-surface-alt/60 hover:bg-surface-alt text-xs font-mono rounded-md border border-border transition-colors ${className}`}
     >
       <span className={`w-2 h-2 rounded-full shrink-0 ${configs.dotColor}`} />
       <span className={`leading-none ${configs.textColor}`}>{displayLabel}</span>
@@ -54,7 +54,7 @@ export const SyncPill: React.FC<SyncPillProps> = ({
         type="button"
         onClick={onClick}
         aria-label={`Sync status: ${displayLabel}. Click to open sync queue.`}
-        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-sm cursor-pointer"
+        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 rounded-md cursor-pointer"
       >
         {content}
       </button>

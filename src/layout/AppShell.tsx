@@ -13,6 +13,10 @@ import {
   LogOut,
   Moon,
   Sun,
+  PanelLeftClose,
+  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { SyncPill } from '../components/ui/SyncPill';
 import { SyncDrawer } from '../components/sync/SyncDrawer';
@@ -37,9 +41,21 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [offlineMode, setOfflineMode] = useState(false);
   const [lastSyncedText, setLastSyncedText] = useState('2m ago');
 
+  const [isNavCollapsed, setIsNavCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('kaya_nav_collapsed') === 'true';
+  });
+
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     return document.documentElement.getAttribute('data-theme') === 'dark';
   });
+
+  const toggleNav = () => {
+    setIsNavCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('kaya_nav_collapsed', String(next));
+      return next;
+    });
+  };
 
   React.useEffect(() => {
     const updateSyncInfo = () => {
@@ -64,6 +80,9 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         searchInputRef.current?.focus();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        toggleNav();
       } else if (
         e.key === '/' &&
         !(e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
@@ -89,27 +108,43 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   };
 
   const navItems = [
-    { label: 'Today', path: '/today', icon: Calendar },
-    { label: 'Patients', path: '/patients', icon: Users },
-    { label: 'Visits', path: '/visits', icon: FileText },
-    { label: 'Reports', path: '/reports', icon: BarChart2 },
-    { label: 'Sync', path: '/sync', icon: RefreshCw },
-    { label: 'Settings', path: '/settings', icon: Settings },
+    { label: 'Today', path: '/today', icon: Calendar, shortcut: 'T' },
+    { label: 'Patients', path: '/patients', icon: Users, shortcut: 'P' },
+    { label: 'Visits', path: '/visits', icon: FileText, shortcut: 'V' },
+    { label: 'Reports', path: '/reports', icon: BarChart2, shortcut: 'R' },
+    { label: 'Sync', path: '/sync', icon: RefreshCw, shortcut: 'S' },
+    { label: 'Settings', path: '/settings', icon: Settings, shortcut: 'G' },
   ];
 
   return (
     <div className="min-h-screen bg-bg text-text flex flex-col font-sans antialiased">
       {/* 64px Top Bar */}
-      <header className="h-16 px-6 bg-surface border-b border-border flex items-center justify-between gap-4 shrink-0 z-20">
-        {/* Left: Brand Dot + Kaya */}
+      <header className="h-16 px-4 md:px-6 bg-surface border-b border-border flex items-center justify-between gap-4 shrink-0 z-20">
+        {/* Left: Nav Toggle + Brand Dot + Kaya */}
         <div className="flex items-center gap-2.5">
-          <span
-            className="w-2.5 h-2.5 rounded-full bg-accent shrink-0"
-            aria-hidden="true"
-          />
-          <span className="font-sans font-medium text-lg text-text tracking-tight">
-            Kaya
-          </span>
+          <button
+            type="button"
+            onClick={toggleNav}
+            className="w-8 h-8 flex items-center justify-center rounded-sm text-text-muted hover:text-text hover:bg-surface-alt transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent cursor-pointer"
+            aria-label={isNavCollapsed ? 'Open navigation bar (⌘B)' : 'Close navigation bar (⌘B)'}
+            title={isNavCollapsed ? 'Open navigation (⌘B)' : 'Close navigation (⌘B)'}
+          >
+            {isNavCollapsed ? (
+              <PanelLeftOpen className="w-4 h-4" strokeWidth={1.5} />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" strokeWidth={1.5} />
+            )}
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <span
+              className="w-2.5 h-2.5 rounded-full bg-accent shrink-0"
+              aria-hidden="true"
+            />
+            <span className="font-sans font-medium text-lg text-text tracking-tight">
+              Kaya
+            </span>
+          </div>
         </div>
 
         {/* Center: Global Search Input with ⌘K Hint */}
@@ -133,7 +168,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                   }
                 }
               }}
-              className="w-full h-9 pl-9 pr-12 bg-surface-alt text-text text-sm rounded-sm border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 transition-colors placeholder:text-text-faint"
+              className="w-full h-9 pl-9 pr-12 bg-surface-alt text-text text-sm rounded-md border border-border focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 transition-colors placeholder:text-text-faint"
             />
             <button
               type="button"
@@ -211,13 +246,41 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </div>
       </header>
 
-      {/* Main Body: 240px Sidebar + Content Area */}
+      {/* Main Body: Collapsible Sidebar + Content Area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 240px Sidebar */}
+        {/* Collapsible Sidebar */}
         <aside
           aria-label="Main Navigation"
-          className="w-[240px] bg-surface border-r border-border shrink-0 flex flex-col py-4"
+          className={`${
+            isNavCollapsed ? 'w-16' : 'w-[240px]'
+          } bg-surface border-r border-border shrink-0 flex flex-col py-4 transition-[width] duration-200 ease-in-out select-none`}
         >
+          {/* Header Row inside Sidebar */}
+          <div className="px-3 mb-2 flex items-center justify-between min-h-7">
+            {!isNavCollapsed ? (
+              <span className="text-[11px] font-medium uppercase tracking-[0.04em] text-text-muted px-3">
+                Navigation
+              </span>
+            ) : (
+              <span className="sr-only">Navigation</span>
+            )}
+            <button
+              type="button"
+              onClick={toggleNav}
+              className={`w-7 h-7 flex items-center justify-center rounded-sm text-text-muted hover:text-text hover:bg-surface-alt transition-colors cursor-pointer ${
+                isNavCollapsed ? 'mx-auto' : 'ml-auto'
+              }`}
+              title={isNavCollapsed ? 'Expand sidebar (⌘B)' : 'Collapse sidebar (⌘B)'}
+              aria-label={isNavCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              {isNavCollapsed ? (
+                <ChevronRight className="w-4 h-4" strokeWidth={1.5} />
+              ) : (
+                <ChevronLeft className="w-4 h-4" strokeWidth={1.5} />
+              )}
+            </button>
+          </div>
+
           <nav className="flex-1 flex flex-col gap-0.5">
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -229,14 +292,17 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 <NavLink
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 h-10 px-4 text-sm font-sans transition-colors select-none ${
+                  title={isNavCollapsed ? `${item.label} (${item.shortcut})` : undefined}
+                  className={`flex items-center ${
+                    isNavCollapsed ? 'justify-center px-0' : 'gap-3 px-4'
+                  } h-10 text-sm font-sans transition-colors select-none ${
                     isActive
-                      ? 'bg-accent-soft text-text border-l-[3px] border-l-accent font-medium'
-                      : 'text-text-muted hover:text-text hover:bg-surface-alt border-l-[3px] border-l-transparent'
+                      ? 'bg-accent-soft text-text font-medium'
+                      : 'text-text-muted hover:text-text hover:bg-surface-alt font-normal'
                   } focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-[-2px]`}
                 >
                   <Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-                  <span>{item.label}</span>
+                  {!isNavCollapsed && <span>{item.label}</span>}
                 </NavLink>
               );
             })}
@@ -244,10 +310,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
           {/* Bottom Sidebar Note */}
           <div className="px-4 pt-4 border-t border-border">
-            <div className="text-xs text-text-muted font-mono leading-relaxed">
-              Kaya EMR v0.1
-              <div className="text-text-faint text-[11px]">Sub-centre offline node</div>
-            </div>
+            {!isNavCollapsed ? (
+              <div className="text-xs text-text-muted font-mono leading-relaxed">
+                Kaya EMR v0.1
+                <div className="text-text-faint text-[11px]">Sub-centre offline node</div>
+              </div>
+            ) : (
+              <div className="text-center">
+                <span className="text-[10px] font-mono text-text-faint">v0.1</span>
+              </div>
+            )}
           </div>
         </aside>
 
